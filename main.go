@@ -132,7 +132,7 @@ func writeAPIData(blockchain []Block) {
 }
 // makeBasicHost creates a LibP2P host with a random peer ID listening on the
 // given multiaddress. It will use secio if secio is true.
-func makeBasicHost(listenPort int, secio bool, randseed int64) (host.Host, error) {
+func makeBasicHost(listenPort int, muxPort int, secio bool, randseed int64) (host.Host, error) {
 	// If the seed is zero, use real cryptographic randomness. Otherwise, use a
 	// deterministic randomness source to make generated keys stay the same
 	// across multiple runs
@@ -177,9 +177,9 @@ func makeBasicHost(listenPort int, secio bool, randseed int64) (host.Host, error
 	fullAddr := addr.Encapsulate(hostAddr)
 	log.Printf("I am %s\n", fullAddr)
 	if secio {
-		log.Printf("Now run \"go run main.go -l %d -d %s -secio\" on a different terminal\n", listenPort+1, fullAddr)
+		log.Printf("Now run \"go run main.go -l %d -p %d -d %s -secio\" on a different terminal\n", listenPort+1,muxPort+1,fullAddr)
 	} else {
-		log.Printf("Now run \"go run main.go -l %d -d %s\" on a different terminal\n", listenPort+1, fullAddr)
+		log.Printf("Now run \"go run main.go -l %d -p %d -d %s\" on a different terminal\n", listenPort+1,muxPort+1,fullAddr)
 	}
 
 	return basicHost, nil
@@ -315,7 +315,7 @@ func main() {
 	
 
 	// Make a host that listens on the given multiaddress
-	ha, err := makeBasicHost(*listenF, *secio, *seed)
+	ha, err := makeBasicHost(*listenF, *muxPort, *secio, *seed)
 	if err != nil {
 		log.Fatal(err)
 	}
