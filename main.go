@@ -14,28 +14,18 @@ import (
 	"log"
 	"math"
 	"myBlockchain/chain"
-	"myBlockchain/http"
+	"os"
+	"strings"
 	"sync"
 )
 
-// Blockchain is a series of validated Blocks
-
 var mutex sync.Mutex
-var rw *bufio.ReadWriter
-
-/*var rw bufio.ReadWriter
-
-func writeToNetwork(data []byte) {
-	mutex.Lock()
-	rw.WriteString(fmt.Sprintf("%s\n", string(data)))
-	rw.Flush()
-	mutex.Unlock()
-}*/
 
 func handleStream(s net.Stream) {
 	log.Println("Got a new stream!")
-	//rw = bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
-	readData(rw)
+	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
+	go readData(rw)
+	go handleCli(rw)
 }
 
 func readData(rw *bufio.ReadWriter) {
@@ -45,35 +35,25 @@ func readData(rw *bufio.ReadWriter) {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(str)
-		/*
-			if str == "" {
-				return
-			}
+		fmt.Println(fmt.Sprintf("Received -> %s", str))
+	}
+}
 
+func handleCli(rw *bufio.ReadWriter) {
+	stdReader := bufio.NewReader(os.Stdin)
 
-			if str != "\n" {
+	for {
+		fmt.Print("> ")
+		sendData, err := stdReader.ReadString('\n')
+		if err != nil {
+			log.Fatal(err)
+		}
 
-				chain := make([]Block, 0)
-				if err := json.Unmarshal([]byte(str), &chain); err != nil {
-					log.Fatal(err)
-				}
-
-				mutex.Lock()
-				if len(chain) > len(Blockchain) {
-					Blockchain = chain
-					bytes, err := json.MarshalIndent(Blockchain, "", "  ")
-					if err != nil {
-
-						log.Fatal(err)
-					}
-					// Green console color: 	\x1b[32m
-					// Reset console color: 	\x1b[0m
-					fmt.Printf("\x1b[32m%s\x1b[0m> ", string(bytes))
-				}
-				mutex.Unlock()
-			}
-		*/
+		transaction := strings.Replace(sendData, "\n", "", -1)
+		//mutex.Lock()
+		rw.WriteString(fmt.Sprintf("%s\n", transaction))
+		rw.Flush()
+		//mutex.Unlock()
 	}
 }
 
@@ -82,9 +62,6 @@ func main() {
 	genesisBlock := chain.CreateGenesisBlock(0, 0)
 	chain.Blockchain = append(chain.Blockchain, genesisBlock)
 
-	// LibP2P code uses golog to log messages. They log with different
-	// string IDs (i.e. "swarm"). We can control the verbosity level for
-	// all loggers with:
 	golog.SetAllLoggers(golog.LogLevel(gologging.INFO)) // Change to DEBUG for extra info
 
 	// Parse options from the command line
@@ -99,7 +76,6 @@ func main() {
 		log.Fatal("Please provide a port to bind on with -l")
 	}
 
-	// Make a host that listens on the given multiaddress
 	host, err := chain.CreateHost(*listenF, *muxPort, *secio, *seed)
 	if err != nil {
 		log.Fatal(err)
@@ -109,9 +85,7 @@ func main() {
 		log.Println("listening for connections")
 		host.SetStreamHandler("/p2p/1.0.0", handleStream)
 	} else {
-
-		// The following code extracts target's peer ID from the
-		// given multiaddress
+		host.SetStreamHandler("/p2p/1.0.0", handleStream)
 		ipfsaddr, err := ma.NewMultiaddr(*target)
 		if err != nil {
 			log.Fatalln(err)
@@ -127,34 +101,28 @@ func main() {
 			log.Fatalln(err)
 		}
 
-		// Decapsulate the /ipfs/<peerID> part from the target
-		// /ip4/<a.b.c.d>/ipfs/<peer> becomes /ip4/<a.b.c.d>
 		targetPeerAddr, _ := ma.NewMultiaddr(
 			fmt.Sprintf("/ipfs/%s", peerid.String()))
 		targetAddr := ipfsaddr.Decapsulate(targetPeerAddr)
-
-		// We have a peer ID and a targetAddr so we add it to the peerstore
-		// so LibP2P knows how to contact it
-		// ha.Peerstore().AddAddr(peerid, targetAddr, pstore.PermanentAddrTTL)
 		host.Peerstore().AddAddr(peerid, targetAddr, math.MaxInt64)
 		log.Println("opening stream")
-		// make a new stream from host B to host A
-		// it should be handled on host A by the handler we set above because
-		// we use the same /p2p/1.0.0 protocol
+
 		s, err := host.NewStream(context.Background(), peerid, "/p2p/1.0.0")
 		if err != nil {
 			log.Fatalln(err)
 		}
-		// Create a buffered stream so that read and writes are non blocking.
-		rw = bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
-		host.SetStreamHandler("/p2p/1.0.0", handleStream)
-	}
+		rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
 
-	httpServer := http.HttpServer{Host: host, RW: rw}
-	if *muxPort != 0 {
-		if err := httpServer.RunHttpServer(*muxPort); err != nil {
-			log.Fatal(err)
-		}
+		/*mtx := &sync.Mutex{}
+		httpServer := http.HttpServer{Host: host, RW: rw, Mutex: mtx}
+		if *muxPort != 0 {
+			if err := httpServer.RunHttpServer(*muxPort); err != nil {
+				log.Fatal(err)
+			}
+		}*/
+
+		go readData(rw)
+		go handleCli(rw)
 	}
 
 	select {}
