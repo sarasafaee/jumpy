@@ -4,14 +4,8 @@ import (
 	"time"
 )
 
-var Node *NodeMetaData
-
-type NodeMetaData struct {
-	PublicKey string
-}
-
 // GenerateBlock will create a new block using previous block's hash
-func (n *NodeMetaData) GenerateBlock(oldBlock, targetBlock Block, transaction Transaction) Block {
+func GenerateBlock(myPublicKey string, oldBlock Block, targetBlockHash, targetBlockNode string, transaction []Transaction) Block {
 
 	var newBlock Block
 	t := time.Now()
@@ -21,8 +15,8 @@ func (n *NodeMetaData) GenerateBlock(oldBlock, targetBlock Block, transaction Tr
 	newBlock.Transaction = transaction
 	connections := make([]BlockConnection, 2)
 	//add last block hash to connections
-	connections = append(connections, BlockConnection{NodePublicKey: n.PublicKey, BlockHash: oldBlock.Hash})
-	//TODO: get random block
+	connections = append(connections, BlockConnection{NodePublicKey: myPublicKey, BlockHash: oldBlock.Hash})
+	connections = append(connections, BlockConnection{NodePublicKey: targetBlockNode, BlockHash: targetBlockHash})
 	newBlock.Connections = connections
 	newBlock.Hash = newBlock.calculateHash()
 

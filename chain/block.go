@@ -13,7 +13,7 @@ type Position struct {
 }
 
 type Transaction struct {
-	position Position `json:"position"`
+	Position Position `json:"position"`
 }
 
 type BlockConnection struct {
@@ -24,7 +24,7 @@ type BlockConnection struct {
 type Block struct {
 	Index       int
 	Timestamp   string
-	Transaction Transaction
+	Transaction []Transaction
 	Hash        string
 	Connections []BlockConnection
 }
@@ -33,7 +33,7 @@ func CreateGenesisBlock(xPos, yPos int) Block {
 	t := time.Now()
 	genesisBlock := Block{}
 	connections := make([]BlockConnection, 2)
-	return Block{0, t.String(), Transaction{position: Position{xPos, yPos}}, genesisBlock.calculateHash(), connections}
+	return Block{0, t.String(), []Transaction{{Position: Position{xPos, yPos}}}, genesisBlock.calculateHash(), connections}
 }
 
 func (b Block) calculateHash() string {
@@ -45,7 +45,11 @@ func (b Block) calculateHash() string {
 }
 
 func (b Block) toString() string {
-	transactionStr := b.Transaction.toString()
+	transactionStr := ""
+	for _, t := range b.Transaction {
+		transactionStr = fmt.Sprintf("%s%s", transactionStr, t.toString())
+	}
+
 	connectionStr := ""
 	for _, c := range b.Connections {
 		connectionStr = fmt.Sprintf("%s%s%s", connectionStr, c.NodePublicKey, c.BlockHash)
@@ -55,5 +59,5 @@ func (b Block) toString() string {
 }
 
 func (t Transaction) toString() string {
-	return fmt.Sprintf("%d,%d", t.position.X, t.position.Y)
+	return fmt.Sprintf("%d,%d", t.Position.X, t.Position.Y)
 }

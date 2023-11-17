@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	PULL_BLOCK = "pull_block\n"
+	PULL_BLOCK = "pull_block"
 	PUSH_BLOCK = "push_block"
 )
 
@@ -72,6 +72,10 @@ func CreateHost(listenPort int, muxPort int, secio bool, randseed int64) (host.H
 	}
 
 	return host, nil
+}
+
+func GetRandomBlockHash() string {
+	return Blockchain[mrand.Intn(len(Blockchain))].Hash
 }
 
 func PullBlockConnection(rw *bufio.ReadWriter) {
