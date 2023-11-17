@@ -65,8 +65,13 @@ func readData(hostId string, rw *bufio.ReadWriter) {
 			}
 			senderID := strings.ReplaceAll(message[2], "#", "")
 			if senderID == hostId {
-				chain.GenerateBlock(hostId, oldBlock, message[1], message[3], memTransactions)
+				b := chain.GenerateBlock(hostId, oldBlock, message[1], message[3], memTransactions)
+				chain.Blockchain = append(chain.Blockchain, b)
+				memTransactions = make([]chain.Transaction, 10)
+
 			}
+		default:
+			continue
 		}
 	}
 }
@@ -77,20 +82,23 @@ func handleCli(host host.Host, rw *bufio.ReadWriter) {
 	for {
 		fmt.Print("> ")
 		sendData, err := stdReader.ReadString('\n')
+		sendData = strings.Replace(sendData, "\n", "", -1)
+
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 
-		fmt.Println(sendData)
-		transaction := strings.Replace(sendData, "\n", "", -1)
-		/*sbyte, err := json.Marshal(transaction)
-		if err != nil {
-			log.Println(err)
+		//fmt.Println(sendData)
+		if sendData == "log" {
+			for _, b := range chain.Blockchain {
+				fmt.Println(fmt.Sprintf("%v", b))
+			}
 			continue
-		}*/
+		}
+
 		pos := chain.Position{}
-		err = json.Unmarshal([]byte(transaction), &pos)
+		err = json.Unmarshal([]byte(sendData), &pos)
 		if err != nil {
 			log.Println(err)
 			continue
