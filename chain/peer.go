@@ -110,14 +110,8 @@ func (ps *PeerStream) HandleCli(rw *bufio.ReadWriter) {
 		ps.MemTransactions = append(ps.MemTransactions, Transaction{
 			Position: pos,
 		})
-		var randomPeer peer.ID
-		for {
-			randomPeer = ps.Host.Peerstore().Peers()[mrand.Intn(ps.Host.Peerstore().Peers().Len())]
-			if randomPeer.String() == ps.Host.ID().String() {
-				continue
-			}
-			break
-		}
+
+		randomPeer := ps.getRandomPeer()
 		message := fmt.Sprintf("%s:%s:%s#", PULL_BLOCK, randomPeer, ps.Host.ID().String())
 		if err = ps.writeStringToStream(rw, message); err != nil {
 			log.Println(err)
@@ -131,6 +125,21 @@ func (ps *PeerStream) writeStringToStream(rw *bufio.ReadWriter, message string) 
 		return err
 	}
 	return rw.Flush()
+}
+
+func (ps *PeerStream) getRandomPeer() peer.ID {
+	var randomPeer peer.ID
+	for {
+		peersLen := ps.Host.Peerstore().Peers().Len()
+		randomIndex := mrand.Intn(peersLen)
+		randomPeer = ps.Host.Peerstore().Peers()[randomIndex]
+		if randomPeer.String() == ps.Host.ID().String() {
+			continue
+		}
+		break
+	}
+
+	return randomPeer
 }
 
 func CreateHost(listenPort int, muxPort int, secio bool, randseed int64) (host.Host, error) {
