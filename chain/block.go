@@ -58,6 +58,26 @@ func (b Block) toString() string {
 	return fmt.Sprintf("%d%s%s%s", b.Index, b.Timestamp, transactionStr, connectionStr)
 }
 
+// GenerateBlock will create a new block using previous block's hash
+func GenerateBlock(myPublicKey string, lastBlock Block, targetBlockHash, targetBlockNode string, transaction []Transaction) Block {
+
+	var newBlock Block
+
+	newBlock.Index = lastBlock.Index + 1
+	newBlock.Transaction = transaction
+	//add last block hash to connections
+	connections := make([]BlockConnection, 0)
+	connections = append(connections, BlockConnection{NodePublicKey: myPublicKey, BlockHash: lastBlock.Hash})
+	connections = append(connections, BlockConnection{NodePublicKey: targetBlockNode, BlockHash: targetBlockHash})
+	newBlock.Connections = connections
+	newBlock.Hash = newBlock.calculateHash()
+
+	t := time.Now()
+	newBlock.Timestamp = t.String()
+
+	return newBlock
+}
+
 func (t Transaction) toString() string {
 	return fmt.Sprintf("%d,%d", t.Position.X, t.Position.Y)
 }
