@@ -38,44 +38,46 @@ func (ps *PeerStream) ReadStream(rw *bufio.ReadWriter) {
 			fmt.Println(err)
 			continue
 		}
-		fmt.Println(fmt.Sprintf("Received -> %s", str))
-		message := strings.Split(str, ":")
-		switch message[0] {
+		fmt.Printf("Received -> %s\n", str)
+		receivedMessage := strings.Split(str, ":")
+		switch receivedMessage[0] {
 		case PULL_BLOCK: //message = [command,receiver,sender]
-			if message[1] == ps.Host.ID().String() {
-				randomBlockHash := GetRandomBlockHash()
-				if len(message[2]) == 0 {
+			if receivedMessage[1] == ps.Host.ID().String() {
+				if len(receivedMessage[2]) == 0 {
 					fmt.Println(errors.New("sender ID is empty"))
 					continue
 				}
-				senderID := strings.ReplaceAll(message[2], "#", "")
-				msg := fmt.Sprintf("%s:%s:%s:%s#", PUSH_BLOCK, randomBlockHash, senderID, ps.Host.ID().String())
-				if _, err = rw.WriteString(msg); err != nil {
-					fmt.Println(err)
+				senderID := strings.ReplaceAll(receivedMessage[2], "#", "")
+
+				lastBlock := GetLastBlock()
+				if lastBlock == nil {
+					fmt.Println(errors.New("no block founded in chain"))
 					continue
 				}
-				if err = rw.Flush(); err != nil {
-					fmt.Println(err)
+				message := fmt.Sprintf("%s:%s:%s:%s#", PUSH_BLOCK, lastBlock.Hash, senderID, ps.Host.ID().String())
+				if err = ps.writeStringToStream(rw, message); err != nil {
+					log.Println(err)
 					continue
 				}
 			}
-		case PUSH_BLOCK: //message = [command,randomBlockHash,receiver,sender]
-			oldBlock := Blockchain[len(Blockchain)-1]
-			if len(message[2]) == 0 {
+		case PUSH_BLOCK: //message = [command,lastBlockHash,receiver,sender]
+			lastBlock := GetLastBlock()
+			if len(receivedMessage[2]) == 0 {
 				fmt.Println(errors.New("sender ID is empty"))
 				continue
 			}
 
-			senderID := strings.ReplaceAll(message[2], "#", "")
+			senderID := strings.ReplaceAll(receivedMessage[2], "#", "")
 			if senderID == ps.Host.ID().String() {
-				b := GenerateBlock(ps.Host.ID().String(), oldBlock, message[1], message[3], ps.MemTransactions)
+				blockNode := strings.ReplaceAll(receivedMessage[3], "#", "")
+				blockHash := receivedMessage[1]
+				b := GenerateBlock(ps.Host.ID().String(), lastBlock, blockNode, blockHash, ps.MemTransactions)
 				Blockchain = append(Blockchain, b)
 				ps.MemTransactions = make([]Transaction, 0)
 			} else {
 				fmt.Println(errors.New("sender ID is not equal to my ID"))
 				continue
 			}
-
 		default:
 			continue
 		}
@@ -87,20 +89,20 @@ func (ps *PeerStream) HandleCli(rw *bufio.ReadWriter) {
 
 	for {
 		fmt.Print("> ")
-		sendData, err := stdReader.ReadString('\n')
+		command, err := stdReader.ReadString('\n')
 		if err != nil {
 			log.Println(err)
 			continue
 		}
-		sendData = strings.Replace(sendData, "\n", "", -1)
+		command = strings.Replace(command, "\n", "", -1)
 
-		if sendData == "log" {
+		if command == "log" {
 			printBlockChain()
 			continue
 		}
 
 		pos := Position{}
-		err = json.Unmarshal([]byte(sendData), &pos)
+		err = json.Unmarshal([]byte(command), &pos)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -116,16 +118,19 @@ func (ps *PeerStream) HandleCli(rw *bufio.ReadWriter) {
 			}
 			break
 		}
-
-		if _, err = rw.WriteString(fmt.Sprintf("%s:%s:%s#", PULL_BLOCK, randomPeer, ps.Host.ID().String())); err != nil {
-			log.Println(err)
-			continue
-		}
-		if err = rw.Flush(); err != nil {
+		message := fmt.Sprintf("%s:%s:%s#", PULL_BLOCK, randomPeer, ps.Host.ID().String())
+		if err = ps.writeStringToStream(rw, message); err != nil {
 			log.Println(err)
 			continue
 		}
 	}
+}
+
+func (ps *PeerStream) writeStringToStream(rw *bufio.ReadWriter, message string) error {
+	if _, err := rw.WriteString(message); err != nil {
+		return err
+	}
+	return rw.Flush()
 }
 
 func CreateHost(listenPort int, muxPort int, secio bool, randseed int64) (host.Host, error) {

@@ -59,7 +59,7 @@ func (b Block) toString() string {
 }
 
 // GenerateBlock will create a new block using previous block's hash
-func GenerateBlock(myPublicKey string, lastBlock Block, targetBlockHash, targetBlockNode string, transaction []Transaction) Block {
+func GenerateBlock(myPublicKey string, lastBlock *Block, targetBlockNode, targetBlockHash string, transaction []Transaction) Block {
 
 	var newBlock Block
 

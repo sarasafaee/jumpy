@@ -21,8 +21,12 @@ const (
 
 var Blockchain []Block
 
-func GetRandomBlockHash() string {
-	return Blockchain[mrand.Intn(len(Blockchain))].Hash
+func GetLastBlock() *Block {
+	return &Blockchain[len(Blockchain)-1]
+}
+
+func GetRandomBlock() *Block {
+	return &Blockchain[mrand.Intn(len(Blockchain))]
 }
 
 func printBlockChain() {
@@ -31,13 +35,13 @@ func printBlockChain() {
 		fmt.Println(fmt.Sprintf("Index: %d\nHash:%s", b.Index, b.Hash))
 		fmt.Printf(SuccessColor, "Transactions:\n")
 		for i, t := range b.Transaction {
-			fmt.Println(fmt.Sprintf("%d: X= %d Y=%d", i, t.Position.X, t.Position.Y))
+			fmt.Println(fmt.Sprintf("%d: X = %d Y = %d", i, t.Position.X, t.Position.Y))
 		}
 		fmt.Printf(ErrorColor, "Conenctions:\n")
 		for _, c := range b.Connections {
 			fmt.Println()
-			fmt.Println(fmt.Sprintf("Node= %s", c.NodePublicKey))
-			fmt.Println(fmt.Sprintf("Block=%s", c.BlockHash))
+			fmt.Println(fmt.Sprintf("Node = %s", c.NodePublicKey))
+			fmt.Println(fmt.Sprintf("Block = %s", c.BlockHash))
 		}
 	}
 }
