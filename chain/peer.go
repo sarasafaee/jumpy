@@ -75,8 +75,8 @@ func (ps *PeerStream) ReadStream(rw *bufio.ReadWriter) {
 				ps.MemTransactions = make([]Transaction, 0)
 			} else {
 				fmt.Println(errors.New("sender ID is not equal to my ID"))
-				continue
 			}
+			continue
 		default:
 			continue
 		}
