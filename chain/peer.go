@@ -12,7 +12,6 @@ import (
 	net "github.com/libp2p/go-libp2p/core/network"
 	"github.com/libp2p/go-libp2p/core/peer"
 	ma "github.com/multiformats/go-multiaddr"
-	"io"
 	"log"
 	mrand "math/rand"
 	"os"
@@ -142,19 +141,9 @@ func (ps *PeerStream) getRandomPeer() peer.ID {
 	return randomPeer
 }
 
-func CreateHost(listenPort int, muxPort int, secio bool, randseed int64) (host.Host, error) {
-	// If the seed is zero, use real cryptographic randomness. Otherwise, use a
-	// deterministic randomness source to make generated keys stay the same
-	// across multiple runs
-	var r io.Reader
-	if randseed == 0 {
-		r = rand.Reader
-	} else {
-		r = mrand.New(mrand.NewSource(randseed))
-	}
+func CreateHost(listenPort int) (host.Host, error) {
 
-	// Generate a key pair for this host. We will use it
-	// to obtain a valid host ID.
+	r := rand.Reader
 	priv, _, err := crypto.GenerateKeyPairWithReader(crypto.RSA, 2048, r)
 	if err != nil {
 		return nil, err
@@ -184,12 +173,8 @@ func CreateHost(listenPort int, muxPort int, secio bool, randseed int64) (host.H
 		}
 	}
 	fullAddr := addr.Encapsulate(hostAddr)
-	log.Printf("I am %s\n", fullAddr)
-	if secio {
-		log.Printf("Now run \"go run main.go -l %d -p %d -d %s -secio\" on a different terminal\n", listenPort+1, muxPort+1, fullAddr)
-	} else {
-		log.Printf("Now run \"go run main.go -l %d -p %d -d %s\" on a different terminal\n", listenPort+1, muxPort+1, fullAddr)
-	}
+	log.Printf("My Address: %s\n", fullAddr)
+	log.Printf("Now run \"go run main.go -l %d -d %s\" on a different terminal\n", listenPort+1, fullAddr)
 
 	return host, nil
 }

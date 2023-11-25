@@ -22,17 +22,14 @@ func main() {
 
 	golog.SetAllLoggers(golog.LogLevel(gologging.INFO)) // Change to DEBUG for extra info
 	listenF := flag.Int("l", 0, "wait for incoming connections")
-	muxPort := flag.Int("p", 0, "wait for incoming transactions")
 	target := flag.String("d", "", "target peer to dial")
-	secio := flag.Bool("secio", false, "enable secio")
-	seed := flag.Int64("seed", 0, "set random seed for id generation")
 	flag.Parse()
 
 	if *listenF == 0 {
 		log.Fatal("Please provide a port to bind on with -l")
 	}
 
-	host, err := chain.CreateHost(*listenF, *muxPort, *secio, *seed)
+	host, err := chain.CreateHost(*listenF)
 	if err != nil {
 		log.Fatal(err)
 	}
