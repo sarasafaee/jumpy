@@ -1,3 +1,3 @@
 # chain-of-bots
 
-go run main.go -l 10000 
+go run cmd/main.go run -p 10000 

@@ -1,47 +1,35 @@
-package main
+package app
 
 import (
 	"bufio"
 	"context"
-	"flag"
 	"fmt"
-	golog "github.com/ipfs/go-log"
 	"github.com/libp2p/go-libp2p/core/peer"
 	_ "github.com/libp2p/go-libp2p/p2p/host/peerstore"
 	ma "github.com/multiformats/go-multiaddr"
-	gologging "github.com/whyrusleeping/go-logging"
 	"log"
 	"math"
 	"myBlockchain/chain"
 )
 
-func main() {
+func Start(listenPort int, targetPeer string) {
 
 	genesisBlock := chain.CreateGenesisBlock(0, 0)
 	chain.Blockchain = append(chain.Blockchain, genesisBlock)
 
-	golog.SetAllLoggers(golog.LogLevel(gologging.INFO)) // Change to DEBUG for extra info
-	listenF := flag.Int("l", 0, "wait for incoming connections")
-	target := flag.String("d", "", "target peer to dial")
-	flag.Parse()
-
-	if *listenF == 0 {
-		log.Fatal("Please provide a port to bind on with -l")
-	}
-
-	host, err := chain.CreateHost(*listenF)
+	host, err := chain.CreateHost(listenPort)
 	if err != nil {
 		log.Fatal(err)
 	}
 	memTransactions := make([]chain.Transaction, 0)
 	stream := chain.PeerStream{Host: host, MemTransactions: memTransactions}
 
-	if *target == "" {
+	if targetPeer == "" {
 		log.Println("listening for connections")
 		host.SetStreamHandler("/p2p/1.0.0", stream.HandleStream)
 	} else {
 		host.SetStreamHandler("/p2p/1.0.0", stream.HandleStream)
-		ipfsAddr, err := ma.NewMultiaddr(*target)
+		ipfsAddr, err := ma.NewMultiaddr(targetPeer)
 		if err != nil {
 			log.Fatalln(err)
 		}

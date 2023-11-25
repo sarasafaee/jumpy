@@ -161,11 +161,8 @@ func CreateHost(listenPort int) (host.Host, error) {
 
 	hostAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", host.ID()))
 
-	// Now we can build a full multiaddress to reach this host
-	// by encapsulating both addresses:
 	addrs := host.Addrs()
 	var addr ma.Multiaddr
-	// select the address starting with "ip4"
 	for _, i := range addrs {
 		if strings.HasPrefix(i.String(), "/ip4") {
 			addr = i
@@ -174,7 +171,7 @@ func CreateHost(listenPort int) (host.Host, error) {
 	}
 	fullAddr := addr.Encapsulate(hostAddr)
 	log.Printf("My Address: %s\n", fullAddr)
-	log.Printf("Now run \"go run main.go -l %d -d %s\" on a different terminal\n", listenPort+1, fullAddr)
+	log.Printf("Now run \"go run cmd/main.go run -p %d -t %s\" on a different terminal\n", listenPort+1, fullAddr)
 
 	return host, nil
 }
