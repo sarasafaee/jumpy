@@ -141,6 +141,20 @@ func (ps *PeerStream) getRandomPeer() peer.ID {
 	return randomPeer
 }
 
+func (ps *PeerStream) GetPeerFullAddr() ma.Multiaddr {
+	hostAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", ps.Host.ID()))
+
+	addrs := ps.Host.Addrs()
+	var addr ma.Multiaddr
+	for _, i := range addrs {
+		if strings.HasPrefix(i.String(), "/ip4") {
+			addr = i
+			break
+		}
+	}
+	return addr.Encapsulate(hostAddr)
+}
+
 func CreateHost(listenPort int) (host.Host, error) {
 
 	r := rand.Reader
@@ -158,20 +172,5 @@ func CreateHost(listenPort int) (host.Host, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	hostAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", host.ID()))
-
-	addrs := host.Addrs()
-	var addr ma.Multiaddr
-	for _, i := range addrs {
-		if strings.HasPrefix(i.String(), "/ip4") {
-			addr = i
-			break
-		}
-	}
-	fullAddr := addr.Encapsulate(hostAddr)
-	log.Printf("My Address: %s\n", fullAddr)
-	log.Printf("Now run \"go run cmd/main.go run -p %d -t %s\" on a different terminal\n", listenPort+1, fullAddr)
-
 	return host, nil
 }
