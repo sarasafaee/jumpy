@@ -14,6 +14,6 @@ var runCmd = &cobra.Command{
 	Short: "Run a DAG Node",
 	Long:  ``,
 	Run: func(cmd *cobra.Command, args []string) {
-		app.Start(listenPort, targetPeer)
+		app.Start(listenPort)
 	},
 }
