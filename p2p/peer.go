@@ -56,7 +56,7 @@ func (ps *PeerStream) ReadStream(rw *bufio.ReadWriter) {
 					continue
 				}
 				message := fmt.Sprintf("%s:%s:%s:%s#", chain.PUSH_BLOCK, lastBlock.Hash, senderID, ps.Host.ID().String())
-				if err = ps.writeStringToStream(rw, message); err != nil {
+				if err = writeStringToStream(rw, message); err != nil {
 					log.Println(err)
 					continue
 				}
@@ -114,18 +114,11 @@ func (ps *PeerStream) HandleCli(rw *bufio.ReadWriter) {
 
 		randomPeer := ps.getRandomPeer()
 		message := fmt.Sprintf("%s:%s:%s#", chain.PULL_BLOCK, randomPeer, ps.Host.ID().String())
-		if err = ps.writeStringToStream(rw, message); err != nil {
+		if err = writeStringToStream(rw, message); err != nil {
 			log.Println(err)
 			continue
 		}
 	}
-}
-
-func (ps *PeerStream) writeStringToStream(rw *bufio.ReadWriter, message string) error {
-	if _, err := rw.WriteString(message); err != nil {
-		return err
-	}
-	return rw.Flush()
 }
 
 func (ps *PeerStream) getRandomPeer() peer.ID {
@@ -143,7 +136,7 @@ func (ps *PeerStream) getRandomPeer() peer.ID {
 	return randomPeer
 }
 
-func (ps *PeerStream) GetPeerFullAddr() ma.Multiaddr {
+func (ps *PeerStream) getPeerFullAddr() ma.Multiaddr {
 	hostAddr, _ := ma.NewMultiaddr(fmt.Sprintf("/ipfs/%s", ps.Host.ID()))
 
 	addrs := ps.Host.Addrs()
@@ -164,7 +157,7 @@ func Run(ctx context.Context, listenPort int, chainGroupName string) {
 	}
 	memTransactions := make([]chain.Transaction, 0)
 	stream := &PeerStream{Host: h, MemTransactions: memTransactions}
-	peerAddr := stream.GetPeerFullAddr()
+	peerAddr := stream.getPeerFullAddr()
 	log.Printf("my address: %s\n", peerAddr)
 
 	// connect to other peers
@@ -211,4 +204,11 @@ func createHost(listenPort int) (host.Host, error) {
 		return nil, err
 	}
 	return host, nil
+}
+
+func writeStringToStream(rw *bufio.ReadWriter, message string) error {
+	if _, err := rw.WriteString(message); err != nil {
+		return err
+	}
+	return rw.Flush()
 }
