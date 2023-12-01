@@ -17,8 +17,8 @@ type Transaction struct {
 }
 
 type BlockConnection struct {
-	NodePublicKey string
-	BlockHash     string
+	PeerID    string
+	BlockHash string
 }
 
 type Block struct {
@@ -52,14 +52,14 @@ func (b Block) toString() string {
 
 	connectionStr := ""
 	for _, c := range b.Connections {
-		connectionStr = fmt.Sprintf("%s%s%s", connectionStr, c.NodePublicKey, c.BlockHash)
+		connectionStr = fmt.Sprintf("%s%s%s", connectionStr, c.PeerID, c.BlockHash)
 	}
 
 	return fmt.Sprintf("%d%s%s%s", b.Index, b.Timestamp, transactionStr, connectionStr)
 }
 
 // GenerateBlock will create a new block using previous block's hash
-func GenerateBlock(myPublicKey string, lastBlock *Block, targetBlockNode, targetBlockHash string, transaction []Transaction) Block {
+func GenerateBlock(myID string, lastBlock *Block, targetBlockPeerID, targetBlockHash string, transaction []Transaction) Block {
 
 	var newBlock Block
 
@@ -67,8 +67,8 @@ func GenerateBlock(myPublicKey string, lastBlock *Block, targetBlockNode, target
 	newBlock.Transaction = transaction
 	//add last block hash to connections
 	connections := make([]BlockConnection, 0)
-	connections = append(connections, BlockConnection{NodePublicKey: myPublicKey, BlockHash: lastBlock.Hash})
-	connections = append(connections, BlockConnection{NodePublicKey: targetBlockNode, BlockHash: targetBlockHash})
+	connections = append(connections, BlockConnection{PeerID: myID, BlockHash: lastBlock.Hash})
+	connections = append(connections, BlockConnection{PeerID: targetBlockPeerID, BlockHash: targetBlockHash})
 	newBlock.Connections = connections
 	newBlock.Hash = newBlock.calculateHash()
 
