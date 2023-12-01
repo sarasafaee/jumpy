@@ -70,11 +70,10 @@ func GenerateBlock(myID string, lastBlock *Block, targetBlockPeerID, targetBlock
 	connections = append(connections, BlockConnection{PeerID: myID, BlockHash: lastBlock.Hash})
 	connections = append(connections, BlockConnection{PeerID: targetBlockPeerID, BlockHash: targetBlockHash})
 	newBlock.Connections = connections
-	newBlock.Hash = newBlock.calculateHash()
-
 	t := time.Now()
 	newBlock.Timestamp = t.String()
 
+	newBlock.Hash = newBlock.calculateHash()
 	return newBlock
 }
 
