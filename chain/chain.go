@@ -29,7 +29,7 @@ func GetRandomBlock() *Block {
 	return &Blockchain[mrand.Intn(len(Blockchain))]
 }
 
-func printBlockChain() {
+func PrintBlockChain() {
 	for _, b := range Blockchain {
 		fmt.Println("-----------------------------------------------------------------------")
 		fmt.Println(fmt.Sprintf("Index: %d\nHash:%s", b.Index, b.Hash))
