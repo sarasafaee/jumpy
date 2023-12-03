@@ -28,8 +28,6 @@ type PeerStream struct {
 	MemTransactions []chain.Transaction
 }
 
-type MedicalRecord interface{}
-
 func (ps *PeerStream) HandleStream(s net.Stream) {
 	//log.Println("connected to: ", s.)
 	rw := bufio.NewReadWriter(bufio.NewReader(s), bufio.NewWriter(s))
