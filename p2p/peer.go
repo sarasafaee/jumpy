@@ -60,12 +60,9 @@ func (ps *PeerStream) ReadStream(rw *bufio.ReadWriter) {
 		switch msg.Topic {
 		case PullBlockTopic:
 			pullMsg := &PullBlockMessage{}
-			err := json.Unmarshal(msg.Payload, pullMsg)
-			if err != nil {
-				fmt.Println(err)
+			if err = msg.Payload.parse(pullMsg); err != nil {
 				continue
 			}
-
 			if pullMsg.TargetID.String() == ps.Host.ID().String() {
 				if len(pullMsg.SelfID) == 0 {
 					fmt.Println(errors.New("sender ID is empty"))
@@ -90,9 +87,7 @@ func (ps *PeerStream) ReadStream(rw *bufio.ReadWriter) {
 			}
 		case PushBlockTopic:
 			pushMsg := &PushBlockMessage{}
-			err := json.Unmarshal(msg.Payload, pushMsg)
-			if err != nil {
-				fmt.Println(err)
+			if err = msg.Payload.parse(pushMsg); err != nil {
 				continue
 			}
 

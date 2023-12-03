@@ -8,16 +8,28 @@ import (
 )
 
 type MessageTopic string
+type MessagePayload []byte
+
+type Message struct {
+	Topic   MessageTopic   `json:"topic"`
+	Payload MessagePayload `json:"payload"`
+}
+
+type PullBlockMessage struct {
+	SelfID   peer.ID `json:"s"`
+	TargetID peer.ID `json:"t"`
+}
+
+type PushBlockMessage struct {
+	BlockHash string  `json:"b"`
+	SelfID    peer.ID `json:"s"`
+	TargetID  peer.ID `json:"t"`
+}
 
 const (
 	PullBlockTopic MessageTopic = "pull_block"
 	PushBlockTopic MessageTopic = "push_block"
 )
-
-type Message struct {
-	Topic   MessageTopic `json:"topic"`
-	Payload []byte       `json:"payload"`
-}
 
 func NewMessage(topic MessageTopic, payload any) *Message {
 	pByte, err := json.Marshal(payload)
@@ -47,13 +59,9 @@ func (m *Message) write(rw *bufio.ReadWriter) error {
 	return rw.Flush()
 }
 
-type PullBlockMessage struct {
-	SelfID   peer.ID `json:"s"`
-	TargetID peer.ID `json:"t"`
-}
-
-type PushBlockMessage struct {
-	BlockHash string  `json:"b"`
-	SelfID    peer.ID `json:"s"`
-	TargetID  peer.ID `json:"t"`
+func (p MessagePayload) parse(msg any) error {
+	if err := json.Unmarshal(p, msg); err != nil {
+		return err
+	}
+	return nil
 }
