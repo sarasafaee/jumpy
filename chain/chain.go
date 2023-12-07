@@ -14,11 +14,6 @@ const (
 	DebugColor   = "\033[0;36m%s\033[0m"
 )
 
-const (
-	PULL_BLOCK = "pull_block"
-	PUSH_BLOCK = "push_block"
-)
-
 var Blockchain []Block
 
 func GetLastBlock() *Block {

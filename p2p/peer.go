@@ -2,6 +2,7 @@ package p2p
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/json"
@@ -20,6 +21,8 @@ import (
 	"strings"
 )
 
+const defaultBufSize = 4096
+
 type PeerStream struct {
 	Host            host.Host
 	MemTransactions []chain.Transaction
@@ -34,46 +37,69 @@ func (ps *PeerStream) HandleStream(s net.Stream) {
 func (ps *PeerStream) ReadStream(rw *bufio.ReadWriter) {
 
 	for {
-		str, err := rw.ReadString('#')
+		i := 0
+		b := make([]byte, 0, defaultBufSize)
+		for i < defaultBufSize {
+			bb, err := rw.ReadByte()
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			b = append(b, bb)
+			i++
+		}
+
+		b = bytes.Trim(b, "\x00")
+		msg := &Message{}
+		err := json.Unmarshal(b, msg)
 		if err != nil {
 			fmt.Println(err)
 			continue
 		}
-		fmt.Printf("Received -> %s\n", str)
-		receivedMessage := strings.Split(str, ":")
-		switch receivedMessage[0] {
-		case chain.PULL_BLOCK: //message = [command,receiver,sender]
-			if receivedMessage[1] == ps.Host.ID().String() {
-				if len(receivedMessage[2]) == 0 {
+
+		switch msg.Topic {
+		case PullBlockTopic:
+			pullMsg := &PullBlockMessage{}
+			if err = msg.Payload.parse(pullMsg); err != nil {
+				continue
+			}
+			if pullMsg.TargetID.String() == ps.Host.ID().String() {
+				if len(pullMsg.SelfID) == 0 {
 					fmt.Println(errors.New("sender ID is empty"))
 					continue
 				}
-				senderID := strings.ReplaceAll(receivedMessage[2], "#", "")
 
 				lastBlock := chain.GetLastBlock()
 				if lastBlock == nil {
 					fmt.Println(errors.New("no block founded in chain"))
 					continue
 				}
-				message := fmt.Sprintf("%s:%s:%s:%s#", chain.PUSH_BLOCK, lastBlock.Hash, senderID, ps.Host.ID().String())
-				if err = writeStringToStream(rw, message); err != nil {
+
+				message := NewMessage(PushBlockTopic, PushBlockMessage{
+					SelfID:    ps.Host.ID(),
+					TargetID:  pullMsg.SelfID,
+					BlockHash: lastBlock.Hash,
+				})
+				if err = message.write(rw); err != nil {
 					log.Println(err)
 					continue
 				}
 			}
-		case chain.PUSH_BLOCK: //message = [command,lastBlockHash,receiver,sender]
+		case PushBlockTopic:
+			pushMsg := &PushBlockMessage{}
+			if err = msg.Payload.parse(pushMsg); err != nil {
+				continue
+			}
+
 			lastBlock := chain.GetLastBlock()
-			if len(receivedMessage[2]) == 0 {
+			if len(pushMsg.SelfID.String()) == 0 {
 				fmt.Println(errors.New("sender ID is empty"))
 				continue
 			}
 
-			senderID := strings.ReplaceAll(receivedMessage[2], "#", "")
-			if senderID == ps.Host.ID().String() {
-				blockNode := strings.ReplaceAll(receivedMessage[3], "#", "")
-				blockHash := receivedMessage[1]
-				b := chain.GenerateBlock(ps.Host.ID().String(), lastBlock, blockNode, blockHash, ps.MemTransactions)
-				chain.Blockchain = append(chain.Blockchain, b)
+			if pushMsg.TargetID.String() == ps.Host.ID().String() {
+				block := chain.GenerateBlock(ps.Host.ID().String(), lastBlock, pushMsg.TargetID.String(), pushMsg.BlockHash, ps.MemTransactions)
+				chain.Blockchain = append(chain.Blockchain, block)
 				ps.MemTransactions = make([]chain.Transaction, 0)
 			} else {
 				fmt.Println(errors.New("sender ID is not equal to my ID"))
@@ -112,9 +138,12 @@ func (ps *PeerStream) HandleCli(rw *bufio.ReadWriter) {
 			Position: pos,
 		})
 
-		randomPeer := ps.getRandomPeer()
-		message := fmt.Sprintf("%s:%s:%s#", chain.PULL_BLOCK, randomPeer, ps.Host.ID().String())
-		if err = writeStringToStream(rw, message); err != nil {
+		randomPeerID := ps.getRandomPeer()
+		message := NewMessage(PullBlockTopic, PullBlockMessage{
+			SelfID:   ps.Host.ID(),
+			TargetID: randomPeerID,
+		})
+		if err = message.write(rw); err != nil {
 			log.Println(err)
 			continue
 		}
@@ -204,11 +233,4 @@ func createHost(listenPort int) (host.Host, error) {
 		return nil, err
 	}
 	return host, nil
-}
-
-func writeStringToStream(rw *bufio.ReadWriter, message string) error {
-	if _, err := rw.WriteString(message); err != nil {
-		return err
-	}
-	return rw.Flush()
 }
